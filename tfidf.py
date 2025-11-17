@@ -8,20 +8,36 @@ import math
 
 def clean_text(text):
     """Remove URLs, punctuation, and extra whitespace; lowercase all words."""
-    # TODO: implement cleaning rules
+    # Remove URLs (http:// or https://)
+    text = re.sub(r'https?://\S+', '', text)
+
+    # Keep only word characters and whitespace
+    text = re.sub(r'[^\w\s]', '', text)
+
+    # Convert to lowercase
+    text = text.lower()
+
+    # Normalize spaces
+    text = re.sub(r'\s+', ' ', text).strip()
+
     return text
 
 
 def remove_stopwords(words, stopwords):
     """Remove stopwords from a list of words."""
-    # TODO: filter out stopwords
-    return words
+    return [word for word in words if word not in stopwords]
 
 
 def stem_word(word):
     """Apply basic stemming rules."""
-    # TODO: reduce words ending with 'ing', 'ly', or 'ment'
-    return word
+    if word.endswith('ing') and len(word) > 4:  # avoid words like 'string'
+        return word[:-3]
+    elif word.endswith('ly') and len(word) > 3:
+        return word[:-2]
+    elif word.endswith('ment') and len(word) > 4:
+        return word[:-4]
+    else:
+        return word
 
 
 def preprocess_file(filename, stopwords):
@@ -29,8 +45,28 @@ def preprocess_file(filename, stopwords):
     Read input file, clean, remove stopwords, apply stemming,
     and write output to 'preproc_<filename>'.
     """
-    # TODO: open file, apply transformations, write output file
-    pass
+    with open(filename, 'r', encoding='utf-8') as f:
+        text = f.read()
+
+    # Clean
+    text = clean_text(text)
+
+    # Split into words
+    words = text.split()
+
+    # Remove stopwords
+    words = remove_stopwords(words, stopwords)
+
+    # Apply stemming
+    words = [stem_word(word) for word in words]
+
+    # Join words back into a single string
+    processed_text = ' '.join(words)
+
+    # Write to output file
+    output_filename = f'preproc_{filename}'
+    with open(output_filename, 'w', encoding='utf-8') as f:
+        f.write(processed_text)
 
 
 # -------------------------------
@@ -40,7 +76,15 @@ def preprocess_file(filename, stopwords):
 def compute_tf(words):
     """Compute term frequency for each word in a single document."""
     tf = {}
-    # TODO: implement TF formula
+    total_words = len(words)
+    
+    for word in words:
+        tf[word] = tf.get(word, 0) + 1
+    
+    # Convert counts to frequencies
+    for word in tf:
+        tf[word] = tf[word] / total_words
+    
     return tf
 
 
@@ -50,21 +94,40 @@ def compute_idf(all_docs):
     all_docs is a list of lists of words.
     """
     idf = {}
-    # TODO: implement IDF formula
+    N = len(all_docs)
+    
+    # Count in how many documents each word appears
+    df = {}
+    for doc in all_docs:
+        unique_words = set(doc)
+        for word in unique_words:
+            df[word] = df.get(word, 0) + 1
+    
+    # Compute IDF
+    for word, count in df.items():
+        idf[word] = math.log(N / count) + 1
+    
     return idf
 
 
 def compute_tfidf(tf, idf):
     """Compute TF-IDF scores from TF and IDF dictionaries."""
     tfidf = {}
-    # TODO: multiply TF * IDF and round to 2 decimals
+    for word in tf:
+        tfidf[word] = round(tf[word] * idf.get(word, 0), 2)
     return tfidf
 
 
 def write_tfidf_to_file(tfidf_scores, output_filename):
     """Write top 5 words and their TF-IDF scores to file."""
-    # TODO: sort by score desc, then word asc
-    pass
+    # Sort: by score descending, then alphabetically
+    sorted_words = sorted(tfidf_scores.items(), key=lambda x: (-x[1], x[0]))
+    
+    # Take top 5
+    top5 = sorted_words[:5]
+    
+    with open(output_filename, 'w', encoding='utf-8') as f:
+        f.write(str(top5))
 
 
 # -------------------------------
